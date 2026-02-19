@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ologundudu - Agege Civic Chronicle</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&family=Playfair+Display:wght@600;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <header>
+        <div class="header-content">
+            <h1>Ologundudu</h1>
+            <p>Agege Civic Chronicle Engine</p>
+        </div>
+        <div class="settings">
+            <input type="password" id="apiKeyInput" placeholder="Paste OpenAI Key Here...">
+            <button id="saveKeyBtn">Save Key</button>
+        </div>
+    </header>
+
+    <main>
+        <section class="feed-section">
+            <div class="section-header">
+                <h2>Raw Civic Radar</h2>
+                <div class="rss-controls">
+                    <input type="text" id="rssUrlInput" value="https://punchng.com/topics/news/feed/" placeholder="RSS Feed URL">
+                    <button id="fetchRssBtn">Scan Radar</button>
+                </div>
+            </div>
+            <div id="newsFeed" class="scroll-container">
+                <p class="empty-state">Click "Scan Radar" to pull the latest news.</p>
+            </div>
+        </section>
+
+        <section class="generator-section">
+            <div class="section-header">
+                <h2>Voice DNA Matrix</h2>
+                <div class="mode-controls">
+                    <select id="voiceMode">
+                        <option value="civic">Civic Amplification (Authoritative)</option>
+                        <option value="motivational">Reflective Motivational (Inspirational)</option>
+                    </select>
+                </div>
+            </div>
+            
+            <div id="selectedNews" class="selected-news-card">
+                <p class="empty-state">Select an article from the radar to generate content.</p>
+            </div>
+
+            <button id="generateBtn" disabled>Generate Multi-Platform Content</button>
+            <div id="loading" class="hidden">Engine processing... Do not close.</div>
+
+            <div id="generatedContent" class="scroll-container hidden">
+                </div>
+        </section>
+    </main>
+
+    <script src="app.js"></script>
+</body>
+</html>
