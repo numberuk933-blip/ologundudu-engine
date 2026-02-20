@@ -133,13 +133,10 @@ const Auth = {
   check() { return State.auth; },
   
   login(pw) {
-    if (pw === CONFIG.password) {
-      State.auth = true;
-      Storage.set(CONFIG.storageKeys.auth, true);
-      return true;
-    }
-    return false;
-  },
+  State.auth = true;
+  Storage.set(CONFIG.storageKeys.auth, true);
+  return true;
+}
   
   logout() {
     State.auth = false;
