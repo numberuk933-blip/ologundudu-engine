@@ -2,59 +2,268 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Ologundudu - Agege Civic Chronicle</title>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&family=Playfair+Display:wght@600;800&display=swap" rel="stylesheet">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="theme-color" content="#6b5742">
+    <title>Ologundudu – Agege Civic Chronicle</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Playfair+Display:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="styles.css">
 </head>
 <body>
-    <header>
-        <div class="header-content">
-            <h1>Ologundudu</h1>
-            <p>Agege Civic Chronicle Engine</p>
+    <!-- Authentication Screen -->
+    <div id="auth-screen" class="screen hidden">
+        <div class="auth-container">
+            <div class="auth-brand">
+                <div class="brand-icon">O</div>
+                <h1>Ologundudu</h1>
+                <p>Agege Civic Chronicle</p>
+            </div>
+            <form id="login-form" class="auth-form">
+                <div class="input-group">
+                    <label for="password">Admin Access</label>
+                    <input type="password" id="password" placeholder="Enter password" required>
+                    <span class="input-hint">Default: admin123</span>
+                </div>
+                <button type="submit" class="btn btn-primary btn-block">Enter Chronicle</button>
+                <div id="auth-error" class="error-message hidden">Invalid password</div>
+            </form>
         </div>
-        <div class="settings">
-            <input type="password" id="apiKeyInput" placeholder="Paste OpenAI Key Here...">
-            <button id="saveKeyBtn">Save Key</button>
+    </div>
+
+    <!-- Main Application -->
+    <div id="app-screen" class="screen hidden">
+        <!-- Header -->
+        <header class="app-header">
+            <div class="header-content">
+                <div class="brand" onclick="Router.go('home')">
+                    <div class="brand-icon-sm">O</div>
+                    <div class="brand-text">
+                        <span class="brand-title">Ologundudu</span>
+                        <span class="brand-subtitle">Agege Civic Chronicle</span>
+                    </div>
+                </div>
+                <nav class="header-nav">
+                    <button class="nav-btn active" data-page="home" onclick="Router.go('home')">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 22h16a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2H8a2 2 0 0 0-2 2v16a2 2 0 0 1-2 2Zm0 0a2 2 0 0 1-2-2v-9c0-1.1.9-2 2-2h2"/><path d="M18 14h-8"/><path d="M18 18h-8"/><path d="M18 10h-8"/></svg>
+                        <span>News</span>
+                    </button>
+                    <button class="nav-btn" data-page="compose" onclick="Router.go('compose')">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
+                        <span>Compose</span>
+                    </button>
+                    <button class="nav-btn" onclick="Auth.logout()">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+                        <span>Exit</span>
+                    </button>
+                </nav>
+            </div>
+        </header>
+
+        <!-- Home Page -->
+        <main id="page-home" class="page active">
+            <div class="container">
+                <!-- Priority Toggle -->
+                <div class="view-toggle">
+                    <button class="toggle-btn active" data-filter="agege" onclick="NewsFilter.set('agege')">
+                        <span class="toggle-badge agege">PRIMARY</span>
+                        <span class="toggle-label">Agege First</span>
+                    </button>
+                    <button class="toggle-btn" data-filter="lagos" onclick="NewsFilter.set('lagos')">
+                        <span class="toggle-badge lagos">SECONDARY</span>
+                        <span class="toggle-label">Lagos Related</span>
+                    </button>
+                    <button class="toggle-btn" data-filter="all" onclick="NewsFilter.set('all')">
+                        <span class="toggle-label">All News</span>
+                    </button>
+                </div>
+
+                <!-- Quick Stats -->
+                <div class="stats-bar">
+                    <div class="stat">
+                        <span class="stat-number" id="stat-agege">0</span>
+                        <span class="stat-label">Agege News</span>
+                    </div>
+                    <div class="stat">
+                        <span class="stat-number" id="stat-lagos">0</span>
+                        <span class="stat-label">Lagos Impact</span>
+                    </div>
+                    <div class="stat">
+                        <span class="stat-number" id="stat-pending">0</span>
+                        <span class="stat-label">Pending</span>
+                    </div>
+                </div>
+
+                <!-- Add News Button -->
+                <button class="btn btn-primary btn-add" onclick="Modal.open('add-news')">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                    Add News Item
+                </button>
+
+                <!-- News Lists -->
+                <div id="news-container" class="news-list">
+                    <!-- Dynamically populated -->
+                </div>
+
+                <div id="empty-state" class="empty-state hidden">
+                    <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M4 22h16a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2H8a2 2 0 0 0-2 2v16a2 2 0 0 1-2 2Zm0 0a2 2 0 0 1-2-2v-9c0-1.1.9-2 2-2h2"/></svg>
+                    <p>No news items found</p>
+                    <button class="btn btn-secondary" onclick="Modal.open('add-news')">Add your first item</button>
+                </div>
+            </div>
+        </main>
+
+        <!-- Compose Page -->
+        <main id="page-compose" class="page">
+            <div class="container">
+                <div class="compose-layout">
+                    <!-- Input Section -->
+                    <div class="compose-input">
+                        <div class="panel">
+                            <div class="panel-header">
+                                <h2>Compose Engine</h2>
+                                <span class="word-count" id="word-count">0 words</span>
+                            </div>
+                            <textarea 
+                                id="compose-text" 
+                                class="compose-textarea" 
+                                placeholder="Enter your content here... The system will transform this into 10 platform formats using Agege Civic Chronicle voice."
+                            ></textarea>
+                            <div class="compose-meta">
+                                <span class="char-count" id="char-count">0 / 15,000</span>
+                            </div>
+                        </div>
+
+                        <div class="panel">
+                            <h3>Voice Mode</h3>
+                            <div class="voice-options">
+                                <label class="voice-card active">
+                                    <input type="radio" name="voice" value="civic" checked onchange="Voice.set('civic')">
+                                    <div class="voice-content">
+                                        <strong>Civic Amplification</strong>
+                                        <span>Institutional, formal, praise-framing</span>
+                                    </div>
+                                </label>
+                                <label class="voice-card">
+                                    <input type="radio" name="voice" value="reflective" onchange="Voice.set('reflective')">
+                                    <div class="voice-content">
+                                        <strong>Reflective Motivational</strong>
+                                        <span>Proverb-based, encouraging, philosophical</span>
+                                    </div>
+                                </label>
+                            </div>
+                        </div>
+
+                        <label class="checkbox-card">
+                            <input type="checkbox" id="correlate-news">
+                            <div class="checkbox-content">
+                                <strong>Correlate with Agege News</strong>
+                                <span>Inject context from latest approved items</span>
+                            </div>
+                        </label>
+
+                        <button class="btn btn-primary btn-generate" onclick="Generator.run()">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+                            Generate 10 Platforms
+                        </button>
+                    </div>
+
+                    <!-- Output Section -->
+                    <div class="compose-output">
+                        <div class="platform-tabs" id="platform-tabs">
+                            <div class="tabs-header" id="tabs-header">
+                                <button class="tab-btn active" data-platform="blog">Blog</button>
+                                <button class="tab-btn" data-platform="newsletter">Newsletter</button>
+                                <button class="tab-btn" data-platform="whatsapp">WhatsApp</button>
+                                <button class="tab-btn" data-platform="instagram">Instagram</button>
+                                <button class="tab-btn" data-platform="facebook">Facebook</button>
+                                <button class="tab-btn" data-platform="linkedin">LinkedIn</button>
+                                <button class="tab-btn" data-platform="tiktok">TikTok</button>
+                                <button class="tab-btn" data-platform="snapchat">Snapchat</button>
+                                <button class="tab-btn" data-platform="x">X</button>
+                                <button class="tab-btn" data-platform="rednote">RedNote</button>
+                            </div>
+                            <div class="tabs-content" id="tabs-content">
+                                <div class="tab-pane active" id="pane-blog">
+                                    <div class="output-placeholder">
+                                        <p>Generated content will appear here</p>
+                                        <span>Select voice mode and click generate</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Add News Modal -->
+    <div id="modal-add-news" class="modal hidden">
+        <div class="modal-backdrop" onclick="Modal.close('add-news')"></div>
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Add News Item</h3>
+                <button class="btn-close" onclick="Modal.close('add-news')">×</button>
+            </div>
+            <form id="form-add-news" class="modal-body">
+                <div class="form-group">
+                    <label for="news-title">Headline *</label>
+                    <input type="text" id="news-title" required placeholder="e.g., New Road Project Announced for Agege">
+                </div>
+                <div class="form-group">
+                    <label for="news-content">Content *</label>
+                    <textarea id="news-content" rows="4" required placeholder="News details..."></textarea>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="news-source">Source *</label>
+                        <input type="text" id="news-source" required placeholder="e.g., Punch, Vanguard, LSG">
+                    </div>
+                    <div class="form-group">
+                        <label for="news-url">Source URL</label>
+                        <input type="url" id="news-url" placeholder="https://...">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>Priority Classification *</label>
+                    <div class="priority-options">
+                        <label class="priority-card active" onclick="Form.selectPriority(this, 'agege')">
+                            <input type="radio" name="priority" value="agege" checked hidden>
+                            <span class="priority-badge agege">AGEGE FIRST</span>
+                            <span>Directly affects Agege LGA</span>
+                        </label>
+                        <label class="priority-card" onclick="Form.selectPriority(this, 'lagos')">
+                            <input type="radio" name="priority" value="lagos" hidden>
+                            <span class="priority-badge lagos">LAGOS RELATED</span>
+                            <span>Broader Lagos news with Agege impact</span>
+                        </label>
+                    </div>
+                </div>
+                <div class="form-actions">
+                    <button type="button" class="btn btn-secondary" onclick="Modal.close('add-news')">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Save News Item</button>
+                </div>
+            </form>
         </div>
-    </header>
+    </div>
 
-    <main>
-        <section class="feed-section">
-            <div class="section-header">
-                <h2>Raw Civic Radar</h2>
-                <div class="rss-controls">
-                    <input type="text" id="rssUrlInput" value="https://punchng.com/topics/news/feed/" placeholder="RSS Feed URL">
-                    <button id="fetchRssBtn">Scan Radar</button>
+    <!-- Generate Modal -->
+    <div id="modal-generate" class="modal hidden">
+        <div class="modal-backdrop" onclick="Modal.close('generate')"></div>
+        <div class="modal-content modal-large">
+            <div class="modal-header">
+                <h3>Generate Platform Content</h3>
+                <button class="btn-close" onclick="Modal.close('generate')">×</button>
+            </div>
+            <div class="modal-body">
+                <div id="generate-preview"></div>
+                <div class="form-actions">
+                    <button type="button" class="btn btn-secondary" onclick="Modal.close('generate')">Close</button>
                 </div>
             </div>
-            <div id="newsFeed" class="scroll-container">
-                <p class="empty-state">Click "Scan Radar" to pull the latest news.</p>
-            </div>
-        </section>
-
-        <section class="generator-section">
-            <div class="section-header">
-                <h2>Voice DNA Matrix</h2>
-                <div class="mode-controls">
-                    <select id="voiceMode">
-                        <option value="civic">Civic Amplification (Authoritative)</option>
-                        <option value="motivational">Reflective Motivational (Inspirational)</option>
-                    </select>
-                </div>
-            </div>
-            
-            <div id="selectedNews" class="selected-news-card">
-                <p class="empty-state">Select an article from the radar to generate content.</p>
-            </div>
-
-            <button id="generateBtn" disabled>Generate Multi-Platform Content</button>
-            <div id="loading" class="hidden">Engine processing... Do not close.</div>
-
-            <div id="generatedContent" class="scroll-container hidden">
-                </div>
-        </section>
-    </main>
+        </div>
+    </div>
 
     <script src="app.js"></script>
 </body>
