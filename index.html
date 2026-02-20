@@ -6,43 +6,79 @@
     <meta name="theme-color" content="#6b5742">
     <title>Ologundudu – Agege Civic Chronicle</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Playfair+Display:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;0,700;1,400&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="styles.css">
 </head>
 <body>
+    <!-- Toast Container -->
+    <div id="toast-container" class="toast-container"></div>
+    
+    <!-- Confetti Container -->
+    <div id="confetti-container" class="confetti-container"></div>
+
     <!-- Auth Screen -->
     <div id="auth-screen" class="screen">
         <div class="auth-container">
             <div class="auth-brand">
-                <div class="brand-icon">O</div>
+                <div class="brand-seal">
+                    <span class="seal-text">O</span>
+                    <div class="seal-ring"></div>
+                </div>
                 <h1>Ologundudu</h1>
-                <p>Agege Civic Chronicle</p>
+                <p class="subtitle">Agege Civic Chronicle</p>
+                <div class="established">Est. 2024</div>
             </div>
             <form id="login-form" class="auth-form">
-                <div class="input-group">
+                <div class="input-group elegant">
                     <label for="password">Journalist Access</label>
-                    <input type="password" id="password" placeholder="Enter password" required>
+                    <div class="input-wrap">
+                        <svg class="input-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+                        <input type="password" id="password" placeholder="Enter access code" required>
+                    </div>
                     <span class="input-hint">Default: admin123</span>
                 </div>
-                <button type="submit" class="btn btn-primary btn-block">Enter Chronicle</button>
-                <div id="auth-error" class="error-message hidden">Invalid password</div>
+                <button type="submit" class="btn btn-elegant btn-block">
+                    <span>Enter Chronicle</span>
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+                </button>
+                <div id="auth-error" class="error-message hidden">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>
+                    Invalid access code
+                </div>
             </form>
         </div>
     </div>
 
     <!-- Main App -->
     <div id="app-screen" class="screen hidden">
-        <header class="app-header">
+        <!-- Refresh Banner (Auto-appear) -->
+        <div id="refresh-banner" class="refresh-banner hidden">
+            <div class="banner-content">
+                <span class="banner-icon">📰</span>
+                <div class="banner-text">
+                    <strong>Fresh news available</strong>
+                    <span>New stories from 12 sources</span>
+                </div>
+                <button class="btn-banner" onclick="RefreshSystem.manualRefresh()">Refresh Now</button>
+                <button class="btn-banner-dismiss" onclick="RefreshSystem.dismissBanner()">✕</button>
+            </div>
+        </div>
+
+        <!-- Header -->
+        <header class="app-header elegant">
             <div class="header-content">
                 <div class="brand" onclick="Router.go('home')">
-                    <div class="brand-icon-sm">O</div>
+                    <div class="brand-seal-sm">
+                        <span>O</span>
+                    </div>
                     <div class="brand-text">
                         <span class="brand-title">Ologundudu</span>
                         <span class="brand-subtitle">Agege Civic Chronicle</span>
                     </div>
                 </div>
                 <nav class="header-nav">
-                    <button class="nav-btn active" data-page="home" onclick="Router.go('home')">
+                    <button class="nav-btn" data-page="home" onclick="Router.go('home')">
                         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 22h16a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2H8a2 2 0 0 0-2 2v16a2 2 0 0 1-2 2Zm0 0a2 2 0 0 1-2-2v-9c0-1.1.9-2 2-2h2"/><path d="M18 14h-8"/><path d="M18 18h-8"/><path d="M18 10h-8"/></svg>
                         <span>Feed</span>
                     </button>
@@ -50,226 +86,322 @@
                         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
                         <span>Write</span>
                     </button>
-                    <button class="nav-btn" onclick="Auth.logout()">
+                    <button class="nav-btn" data-page="saved" onclick="Router.go('saved')">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>
+                        <span>Saved</span>
+                    </button>
+                    <button class="nav-btn" data-page="history" onclick="Router.go('history')">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                        <span>History</span>
+                    </button>
+                    <button class="nav-btn nav-exit" onclick="Auth.logout()">
                         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
-                        <span>Exit</span>
                     </button>
                 </nav>
             </div>
         </header>
 
-        <!-- Home / RSS Feed -->
-        <main id="page-home" class="page active">
+        <!-- Home / News Feed -->
+        <main id="page-home" class="page">
             <div class="container">
-                <div class="page-header">
-                    <h2>Live News Feed</h2>
-                    <p>Auto-updating Lagos & Agege headlines. Click any story to rewrite it.</p>
+                <!-- Page Header -->
+                <div class="page-header elegant">
+                    <div class="header-text">
+                        <h2>Live News Feed</h2>
+                        <p>Real-time stories from 12 verified sources across Nigeria</p>
+                    </div>
+                    <div class="refresh-control">
+                        <button id="refresh-btn" class="btn-refresh-elegant" onclick="RefreshSystem.manualRefresh()">
+                            <svg id="refresh-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M23 4v6h-6"/><path d="M1 20v-6h6"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/>
+                            </svg>
+                            <span>Refresh News</span>
+                        </button>
+                        <div class="refresh-status">
+                            <span id="status-dot" class="status-dot"></span>
+                            <span id="refresh-status">Checking...</span>
+                        </div>
+                    </div>
                 </div>
 
-                <div id="rss-loading" class="loading-inline">
-                    <div class="spinner-sm"></div>
-                    <span>Fetching latest news...</span>
+                <!-- Stats Bar -->
+                <div class="stats-bar elegant">
+                    <div class="stat-card">
+                        <span id="stat-agege" class="stat-number">0</span>
+                        <span class="stat-label">Agege</span>
+                    </div>
+                    <div class="stat-card">
+                        <span id="stat-lagos" class="stat-number">0</span>
+                        <span class="stat-label">Lagos</span>
+                    </div>
+                    <div class="stat-card">
+                        <span id="stat-nigeria" class="stat-number">0</span>
+                        <span class="stat-label">Nigeria</span>
+                    </div>
+                    <div class="stat-card total">
+                        <span id="stat-total" class="stat-number">0</span>
+                        <span class="stat-label">Total</span>
+                    </div>
                 </div>
 
-                <div id="rss-feed" class="news-list hidden">
-                    <!-- RSS items injected here -->
+                <!-- Search & Filters -->
+                <div class="controls-bar">
+                    <div class="search-bar elegant">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+                        <input type="text" id="search-input" placeholder="Search headlines, sources, topics...">
+                    </div>
                 </div>
 
-                <div id="rss-error" class="alert alert-warning hidden">
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
-                    <span>Using offline demo feed. Check connection for live updates.</span>
+                <div class="source-filters" id="source-filters">
+                    <!-- Populated by JS -->
                 </div>
+
+                <div class="results-toolbar">
+                    <span id="results-count">Loading stories...</span>
+                </div>
+
+                <!-- Loading State -->
+                <div id="rss-loading" class="loading-state">
+                    <div class="loading-spinner">
+                        <div class="spinner-ring"></div>
+                        <div class="spinner-ring"></div>
+                        <div class="spinner-ring"></div>
+                    </div>
+                    <p> Gathering fresh perspectives...</p>
+                    <span id="loading-progress">0/12 sources</span>
+                </div>
+
+                <!-- Error State -->
+                <div id="rss-error" class="error-state hidden">
+                    <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+                    <h3>Unable to reach news sources</h3>
+                    <p>Using offline demo feed. Check your connection.</p>
+                    <button class="btn btn-secondary" onclick="RefreshSystem.manualRefresh()">Try Again</button>
+                </div>
+
+                <!-- News Grid -->
+                <div id="rss-feed" class="news-grid hidden"></div>
             </div>
         </main>
 
         <!-- Compose Page -->
         <main id="page-compose" class="page">
             <div class="container">
-                <div class="compose-header">
-                    <h2>Platform Generator</h2>
-                    <p class="compose-subtitle">Select up to 3 platforms to avoid timeouts</p>
+                <div class="compose-header elegant">
+                    <div>
+                        <h2>Platform Generator</h2>
+                        <p>Craft your message with the Voice of Agege</p>
+                    </div>
                 </div>
 
                 <div class="compose-layout">
-                    <!-- Input -->
-                    <div class="compose-input">
-                        <div class="panel">
+                    <!-- Input Panel -->
+                    <div class="compose-panel">
+                        <div class="panel-card">
                             <div class="panel-header">
-                                <label class="panel-label">Your Draft</label>
-                                <span class="word-count" id="word-count">0 words</span>
+                                <label>Your Draft</label>
+                                <span id="word-count" class="counter">0 words</span>
                             </div>
-                            <textarea 
-                                id="compose-text" 
-                                class="compose-textarea" 
-                                placeholder="Paste news article or write your draft here..."
-                            ></textarea>
+                            <textarea id="compose-text" class="compose-textarea elegant" placeholder="Paste news article or write your draft here... The Chronicle will transform it for your chosen platforms."></textarea>
                             <div class="panel-footer">
-                                <span class="char-count" id="char-count">0 / 15,000</span>
+                                <span id="char-count" class="counter subtle">0 / 15,000</span>
                             </div>
                         </div>
 
-                        <!-- Voice Selection -->
-                        <div class="panel panel-compact">
+                        <div class="panel-card compact">
                             <label class="panel-label">Voice DNA</label>
-                            <div class="voice-toggle">
-                                <button class="voice-btn active" data-voice="civic" onclick="Voice.set('civic')">
-                                    <strong>Civic Amplification</strong>
-                                    <span>Institutional, formal, praise-framing</span>
+                            <div class="voice-selector">
+                                <button class="voice-option active" data-voice="civic" onclick="Voice.set('civic')">
+                                    <span class="voice-icon">🏛️</span>
+                                    <div class="voice-info">
+                                        <strong>Civic Amplification</strong>
+                                        <span>Institutional, formal, praise-framing</span>
+                                    </div>
                                 </button>
-                                <button class="voice-btn" data-voice="reflective" onclick="Voice.set('reflective')">
-                                    <strong>Reflective Motivational</strong>
-                                    <span>Proverb-based, encouraging, philosophical</span>
+                                <button class="voice-option" data-voice="reflective" onclick="Voice.set('reflective')">
+                                    <span class="voice-icon">🌟</span>
+                                    <div class="voice-info">
+                                        <strong>Reflective Motivational</strong>
+                                        <span>Proverb-based, encouraging, philosophical</span>
+                                    </div>
                                 </button>
                             </div>
                         </div>
 
-                        <!-- Context Toggle -->
-                        <label class="toggle-card">
+                        <label class="toggle-elegant">
                             <input type="checkbox" id="use-context" checked>
-                            <div class="toggle-content">
+                            <div class="toggle-box">
                                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
-                                <div>
-                                    <strong>Use Feed Context</strong>
-                                    <span>Inject recent headlines for local relevance</span>
+                                <div class="toggle-text">
+                                    <strong>Enrich with local context</strong>
+                                    <span>Weave in recent Agege headlines</span>
                                 </div>
                             </div>
                         </label>
                     </div>
 
                     <!-- Platform Selection -->
-                    <div class="compose-platforms">
-                        <div class="panel">
-                            <div class="panel-header platform-header">
-                                <label class="panel-label">Select Platforms <span class="selection-hint">(max 3)</span></label>
-                                <span class="selection-count" id="selection-count">0/3 selected</span>
+                    <div class="platforms-panel">
+                        <div class="panel-card">
+                            <div class="panel-header">
+                                <label>Select Platforms <span class="hint">(max 3)</span></label>
+                                <span id="selection-count" class="counter">0/3</span>
                             </div>
-                            
+
                             <div class="platform-grid" id="platform-grid">
-                                <label class="platform-card" data-platform="blog">
+                                <label class="platform-tile" data-platform="blog">
                                     <input type="checkbox" name="platform" value="blog" hidden onchange="PlatformSelect.update()">
-                                    <div class="platform-icon">📝</div>
-                                    <div class="platform-info">
-                                        <strong>Blog</strong>
-                                        <span>800-1200 words</span>
-                                    </div>
-                                    <div class="platform-check">✓</div>
+                                    <span class="tile-icon">📝</span>
+                                    <span class="tile-name">Blog</span>
+                                    <span class="tile-hint">800-1200 words</span>
+                                    <span class="tile-check">✓</span>
                                 </label>
 
-                                <label class="platform-card" data-platform="newsletter">
+                                <label class="platform-tile" data-platform="newsletter">
                                     <input type="checkbox" name="platform" value="newsletter" hidden onchange="PlatformSelect.update()">
-                                    <div class="platform-icon">📧</div>
-                                    <div class="platform-info">
-                                        <strong>Newsletter</strong>
-                                        <span>Email format</span>
-                                    </div>
-                                    <div class="platform-check">✓</div>
+                                    <span class="tile-icon">📧</span>
+                                    <span class="tile-name">Newsletter</span>
+                                    <span class="tile-hint">Email format</span>
+                                    <span class="tile-check">✓</span>
                                 </label>
 
-                                <label class="platform-card" data-platform="whatsapp">
+                                <label class="platform-tile" data-platform="whatsapp">
                                     <input type="checkbox" name="platform" value="whatsapp" hidden onchange="PlatformSelect.update()">
-                                    <div class="platform-icon">💬</div>
-                                    <div class="platform-info">
-                                        <strong>WhatsApp</strong>
-                                        <span>Mobile messaging</span>
-                                    </div>
-                                    <div class="platform-check">✓</div>
+                                    <span class="tile-icon">💬</span>
+                                    <span class="tile-name">WhatsApp</span>
+                                    <span class="tile-hint">Mobile messaging</span>
+                                    <span class="tile-check">✓</span>
                                 </label>
 
-                                <label class="platform-card" data-platform="instagram">
+                                <label class="platform-tile" data-platform="instagram">
                                     <input type="checkbox" name="platform" value="instagram" hidden onchange="PlatformSelect.update()">
-                                    <div class="platform-icon">📷</div>
-                                    <div class="platform-info">
-                                        <strong>Instagram</strong>
-                                        <span>Caption + hashtags</span>
-                                    </div>
-                                    <div class="platform-check">✓</div>
+                                    <span class="tile-icon">📷</span>
+                                    <span class="tile-name">Instagram</span>
+                                    <span class="tile-hint">Caption + hashtags</span>
+                                    <span class="tile-check">✓</span>
                                 </label>
 
-                                <label class="platform-card" data-platform="facebook">
+                                <label class="platform-tile" data-platform="facebook">
                                     <input type="checkbox" name="platform" value="facebook" hidden onchange="PlatformSelect.update()">
-                                    <div class="platform-icon">👥</div>
-                                    <div class="platform-info">
-                                        <strong>Facebook</strong>
-                                        <span>Community post</span>
-                                    </div>
-                                    <div class="platform-check">✓</div>
+                                    <span class="tile-icon">👥</span>
+                                    <span class="tile-name">Facebook</span>
+                                    <span class="tile-hint">Community post</span>
+                                    <span class="tile-check">✓</span>
                                 </label>
 
-                                <label class="platform-card" data-platform="linkedin">
+                                <label class="platform-tile" data-platform="linkedin">
                                     <input type="checkbox" name="platform" value="linkedin" hidden onchange="PlatformSelect.update()">
-                                    <div class="platform-icon">💼</div>
-                                    <div class="platform-info">
-                                        <strong>LinkedIn</strong>
-                                        <span>Professional</span>
-                                    </div>
-                                    <div class="platform-check">✓</div>
+                                    <span class="tile-icon">💼</span>
+                                    <span class="tile-name">LinkedIn</span>
+                                    <span class="tile-hint">Professional</span>
+                                    <span class="tile-check">✓</span>
                                 </label>
 
-                                <label class="platform-card" data-platform="tiktok">
+                                <label class="platform-tile" data-platform="tiktok">
                                     <input type="checkbox" name="platform" value="tiktok" hidden onchange="PlatformSelect.update()">
-                                    <div class="platform-icon">🎵</div>
-                                    <div class="platform-info">
-                                        <strong>TikTok</strong>
-                                        <span>60s script</span>
-                                    </div>
-                                    <div class="platform-check">✓</div>
+                                    <span class="tile-icon">🎵</span>
+                                    <span class="tile-name">TikTok</span>
+                                    <span class="tile-hint">60s script</span>
+                                    <span class="tile-check">✓</span>
                                 </label>
 
-                                <label class="platform-card" data-platform="snapchat">
+                                <label class="platform-tile" data-platform="snapchat">
                                     <input type="checkbox" name="platform" value="snapchat" hidden onchange="PlatformSelect.update()">
-                                    <div class="platform-icon">👻</div>
-                                    <div class="platform-info">
-                                        <strong>Snapchat</strong>
-                                        <span>Brief update</span>
-                                    </div>
-                                    <div class="platform-check">✓</div>
+                                    <span class="tile-icon">👻</span>
+                                    <span class="tile-name">Snapchat</span>
+                                    <span class="tile-hint">Brief update</span>
+                                    <span class="tile-check">✓</span>
                                 </label>
 
-                                <label class="platform-card" data-platform="x">
+                                <label class="platform-tile" data-platform="x">
                                     <input type="checkbox" name="platform" value="x" hidden onchange="PlatformSelect.update()">
-                                    <div class="platform-icon">𝕏</div>
-                                    <div class="platform-info">
-                                        <strong>X (Twitter)</strong>
-                                        <span>Thread format</span>
-                                    </div>
-                                    <div class="platform-check">✓</div>
+                                    <span class="tile-icon">𝕏</span>
+                                    <span class="tile-name">X (Twitter)</span>
+                                    <span class="tile-hint">Thread format</span>
+                                    <span class="tile-check">✓</span>
                                 </label>
 
-                                <label class="platform-card" data-platform="rednote">
+                                <label class="platform-tile" data-platform="rednote">
                                     <input type="checkbox" name="platform" value="rednote" hidden onchange="PlatformSelect.update()">
-                                    <div class="platform-icon">📖</div>
-                                    <div class="platform-info">
-                                        <strong>RedNote</strong>
-                                        <span>Narrative story</span>
-                                    </div>
-                                    <div class="platform-check">✓</div>
+                                    <span class="tile-icon">📖</span>
+                                    <span class="tile-name">RedNote</span>
+                                    <span class="tile-hint">Narrative story</span>
+                                    <span class="tile-check">✓</span>
                                 </label>
                             </div>
 
-                            <button 
-                                id="generate-btn" 
-                                class="btn btn-primary btn-generate" 
-                                onclick="Generator.run()"
-                                disabled
-                            >
+                            <button id="generate-btn" class="btn btn-generate-elegant" onclick="Generator.run()" disabled>
                                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
-                                Generate Selected Platforms
+                                <span>Select Platforms</span>
                             </button>
                         </div>
                     </div>
                 </div>
 
-                <!-- Results -->
+                <!-- Results Area -->
                 <div id="results-area" class="results-area hidden">
                     <div class="results-header">
                         <h3>Generated Content</h3>
-                        <button class="btn btn-secondary btn-sm" onclick="Generator.clear()">
-                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg>
-                            Clear
+                        <button class="btn btn-text" onclick="Generator.clear()">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+                            Clear All
                         </button>
                     </div>
                     <div id="results-grid" class="results-grid"></div>
                 </div>
+            </div>
+        </main>
+
+        <!-- Saved News Page -->
+        <main id="page-saved" class="page">
+            <div class="container">
+                <div class="page-header elegant">
+                    <h2>Saved News Bank</h2>
+                    <p>Your curated collection of stories for future reference</p>
+                </div>
+                
+                <div id="saved-empty" class="empty-state elegant">
+                    <div class="empty-icon">📚</div>
+                    <h3>Your news bank is empty</h3>
+                    <p>Save stories from the feed to build your personal archive</p>
+                    <button class="btn btn-elegant" onclick="Router.go('home')">
+                        Browse News Feed
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+                    </button>
+                </div>
+                
+                <div id="saved-list" class="news-grid"></div>
+            </div>
+        </main>
+
+        <!-- History Page -->
+        <main id="page-history" class="page">
+            <div class="container">
+                <div class="page-header elegant">
+                    <h2>Generation History</h2>
+                    <p>Every story you've crafted with the Chronicle</p>
+                </div>
+                
+                <div class="history-stats" id="history-stats"></div>
+                
+                <div class="history-toolbar">
+                    <button class="btn btn-text-danger" onclick="HistoryBank.clearAll()">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+                        Clear History
+                    </button>
+                </div>
+                
+                <div id="history-empty" class="empty-state elegant hidden">
+                    <div class="empty-icon">⏳</div>
+                    <h3>No generations yet</h3>
+                    <p>Your writing history will appear here</p>
+                    <button class="btn btn-elegant" onclick="Router.go('compose')">
+                        Start Writing
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
+                    </button>
+                </div>
+                
+                <div id="history-list" class="history-list"></div>
             </div>
         </main>
     </div>
