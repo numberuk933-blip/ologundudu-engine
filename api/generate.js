@@ -1,91 +1,44 @@
-// api/generate.js - Vercel Serverless Function
-// Lightweight, timeout-safe API for selective platform generation
+// api/generate.js - Vercel Edge Function for Ologundudu
 
 export const config = {
-  runtime: 'edge', // Edge runtime for speed
-  maxDuration: 10, // Keep under Vercel limits
+  runtime: 'edge',
 };
 
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
 
-const PLATFORM_PROMPTS = {
-  blog: {
-    system: 'You are a civic journalist writing for Agege Local Government. Use institutional tone, long compound sentences, praise framing, formal civic language. 800-1200 words.',
-    format: 'Full blog post with headers',
-    max_tokens: 2000
-  },
-  newsletter: {
-    system: 'Write a professional email newsletter. Include subject line and body. Formal but readable tone.',
-    format: 'Subject line + Email body',
-    max_tokens: 1000
-  },
-  whatsapp: {
-    system: 'Write for WhatsApp messaging. Block paragraphs, minimal formatting, conversational but respectful. Mobile-optimized.',
-    format: 'WhatsApp message',
-    max_tokens: 800
-  },
-  instagram: {
-    system: 'Write Instagram caption. Shorter format, line breaks, engaging tone, include 5-7 civic hashtags at end.',
-    format: 'Instagram caption with hashtags',
-    max_tokens: 600
-  },
-  facebook: {
-    system: 'Write Facebook community post. 2-3 paragraphs, community-focused, discussion-inviting.',
-    format: 'Facebook post',
-    max_tokens: 800
-  },
-  linkedin: {
-    system: 'Write LinkedIn professional post. Policy-oriented, formal tone, no emojis, professional insights.',
-    format: 'LinkedIn article',
-    max_tokens: 1000
-  },
-  tiktok: {
-    system: 'Write TikTok video script. Include [VISUAL] and [AUDIO] cues. 60-second script, punchy sentences.',
-    format: 'TikTok script with cues',
-    max_tokens: 600
-  },
-  snapchat: {
-    system: 'Write Snapchat update. Very brief, under 100 words, punchy hook, immediate.',
-    format: 'Snapchat text',
-    max_tokens: 300
-  },
-  x: {
-    system: 'Write Twitter/X thread. Numbered format (1/, 2/, etc). Max 280 chars per tweet. 3-5 tweets.',
-    format: 'Twitter thread',
-    max_tokens: 800
-  },
-  rednote: {
-    system: 'Write RedNote narrative. Storytelling style, observational, reflective tone, personal narrative.',
-    format: 'RedNote story',
-    max_tokens: 1000
-  }
+const PLATFORM_CONFIGS = {
+  blog: { maxTokens: 2000, description: 'Full blog post, 800-1200 words with headers' },
+  newsletter: { maxTokens: 1200, description: 'Email newsletter with subject line' },
+  whatsapp: { maxTokens: 800, description: 'Mobile messaging, short paragraphs' },
+  instagram: { maxTokens: 600, description: 'Caption with 5-7 hashtags' },
+  facebook: { maxTokens: 800, description: 'Community post, 2-3 paragraphs' },
+  linkedin: { maxTokens: 1000, description: 'Professional, policy-focused' },
+  tiktok: { maxTokens: 600, description: '60s video script with [VISUAL] cues' },
+  snapchat: { maxTokens: 300, description: 'Brief update under 100 words' },
+  x: { maxTokens: 800, description: 'Thread format numbered 1/, 2/, etc.' },
+  rednote: { maxTokens: 1000, description: 'Narrative storytelling style' }
 };
 
-const VOICE_DNA = {
-  civic: `VOICE: Civic Amplification
-- Institutional, authoritative tone
-- Long, flowing compound sentences
-- Praise framing: acknowledge efforts before noting improvements
-- Community impact emphasis
-- Formal closings with civic call-to-action
-- Use "We commend," "Furthermore," "Consequently"
-- NO contractions, NO slang, NO aggressive tones
-- Reference Agege landmarks: Pen Cinema, Ogba, Orile Agege, Abule Egba, Iju`,
+const VOICE_PROMPTS = {
+  civic: `You are the Voice of Ologundudu - Agege Civic Chronicle.
+TONE: Institutional, authoritative, dignified.
+STYLE: Long compound sentences, formal vocabulary, praise framing.
+PHRASES: Use "We commend," "Furthermore," "Consequently," "It is imperative."
+AVOID: Contractions, slang, aggressive criticism.
+CLOSING: Forward-looking civic call-to-action.
+REFERENCE: Agege landmarks - Pen Cinema, Ogba, Orile Agege, Abule Egba, Iju, Ojuwoye.`,
 
-  reflective: `VOICE: Reflective Motivational
-- Open with Nigerian/Yoruba proverb
-- Encouraging, warm tone like elder wisdom
-- Philosophical reflection on community
-- Mindset call-to-action: "Let us," "Together we can"
-- Close with hope and collective responsibility
-- Use "My brothers and sisters in Agege..."
-- Proverbs: "Ile la tin ko eso re," "Ajo o dabi ile"
-- Focus on unity, resilience, shared values`
+  reflective: `You are the Voice of Ologundudu - Agege Civic Chronicle.
+TONE: Warm, encouraging, elder wisdom.
+OPENING: Start with Nigerian/Yoruba proverb about community/unity.
+PHRASES: Use "My brothers and sisters in Agege," "Let us reflect," "Together we can."
+STYLE: Philosophical reflection, mindset focus, hopeful.
+CLOSING: Blessing or collective responsibility call.
+PROVERBS: "Ile la tin ko eso re," "Ajo o dabi ile," "Bi a ba n gunyan ni a o maa gun owo.`
 };
 
 export default async function handler(request) {
-  // CORS headers
-  const headers = {
+  const corsHeaders = {
     'Access-Control-Allow-Origin': '*',
     'Access-Control-Allow-Methods': 'POST, OPTIONS',
     'Access-Control-Allow-Headers': 'Content-Type',
@@ -93,59 +46,66 @@ export default async function handler(request) {
   };
 
   if (request.method === 'OPTIONS') {
-    return new Response(null, { headers, status: 200 });
+    return new Response(null, { headers: corsHeaders, status: 204 });
   }
 
   if (request.method !== 'POST') {
     return new Response(JSON.stringify({ error: 'Method not allowed' }), {
       status: 405,
-      headers,
+      headers: corsHeaders,
     });
   }
 
   try {
-    const { text, platforms, voice, contextNews = [] } = await request.json();
+    const { text, platforms, voice, contextNews } = await request.json();
 
-    // Validation
     if (!text || !platforms || !Array.isArray(platforms) || platforms.length === 0) {
-      return new Response(JSON.stringify({ 
-        error: 'Missing required fields: text and platforms array' 
-      }), { status: 400, headers });
+      return new Response(JSON.stringify({ error: 'Missing text or platforms' }), {
+        status: 400,
+        headers: corsHeaders,
+      });
     }
 
     if (platforms.length > 3) {
-      return new Response(JSON.stringify({ 
-        error: 'Maximum 3 platforms per request to avoid timeouts' 
-      }), { status: 400, headers });
+      return new Response(JSON.stringify({ error: 'Maximum 3 platforms per request' }), {
+        status: 400,
+        headers: corsHeaders,
+      });
     }
 
-    // Build context
+    if (!OPENAI_API_KEY) {
+      return new Response(JSON.stringify({ error: 'API key not configured' }), {
+        status: 500,
+        headers: corsHeaders,
+      });
+    }
+
+    // Build context from recent news
     let contextPrompt = '';
-    if (contextNews.length > 0) {
-      contextPrompt = `\n\nRELEVANT LOCAL CONTEXT:\n${contextNews.map((n, i) => 
-        `[${i + 1}] ${n.title} (${n.source})`
-      ).join('\n')}\n\nReference these local developments where relevant.`;
+    if (contextNews && contextNews.length > 0) {
+      contextPrompt = `\n\nRELEVANT LOCAL CONTEXT (reference these developments):\n${contextNews.slice(0, 3).map(n => `• ${n.title} (${n.source})`).join('\n')}`;
     }
 
-    // Generate for each selected platform (parallel)
+    const systemPrompt = VOICE_PROMPTS[voice] || VOICE_PROMPTS.civic;
+
+    // Generate for each platform in parallel
     const results = await Promise.all(
       platforms.map(async (platform) => {
-        const config = PLATFORM_PROMPTS[platform];
-        if (!config) return { platform, error: 'Unknown platform' };
+        const config = PLATFORM_CONFIGS[platform];
+        if (!config) {
+          return { platform, content: `[Error: Unknown platform ${platform}]`, success: false };
+        }
 
-        const voicePrompt = VOICE_DNA[voice] || VOICE_DNA.civic;
-        
-        const prompt = `${voicePrompt}
+        const userPrompt = `Rewrite this content for ${platform.toUpperCase()}:
 
-${config.system}
+"${text}"${contextPrompt}
 
-CONTENT TO REWRITE:
-"""
-${text}
-"""${contextPrompt}
-
-FORMAT: ${config.format}
-Write ONLY the ${platform} content. No explanations, no markdown code blocks.`;
+FORMAT: ${config.description}
+Requirements:
+- Adapt tone and length for ${platform}
+- Maintain factual accuracy
+- Include relevant local context if provided
+- Return ONLY the ${platform} content, no explanations`;
 
         try {
           const response = await fetch('https://api.openai.com/v1/chat/completions', {
@@ -155,55 +115,60 @@ Write ONLY the ${platform} content. No explanations, no markdown code blocks.`;
               'Content-Type': 'application/json',
             },
             body: JSON.stringify({
-              model: 'gpt-4o-mini', // Fast, cheap, effective
+              model: 'gpt-4o-mini',
               messages: [
-                { role: 'system', content: voicePrompt },
-                { role: 'user', content: prompt }
+                { role: 'system', content: systemPrompt },
+                { role: 'user', content: userPrompt }
               ],
-              max_tokens: config.max_tokens,
+              max_tokens: config.maxTokens,
               temperature: 0.7,
             }),
           });
 
           if (!response.ok) {
-            throw new Error(`OpenAI error: ${response.status}`);
+            const errorText = await response.text();
+            throw new Error(`OpenAI ${response.status}: ${errorText}`);
           }
 
           const data = await response.json();
-          const content = data.choices[0]?.message?.content?.trim() || '';
-          
+          const content = data.choices[0]?.message?.content?.trim();
+
+          if (!content) {
+            throw new Error('Empty response from OpenAI');
+          }
+
           return { platform, content, success: true };
+
         } catch (error) {
+          console.error(`Error generating ${platform}:`, error);
           return { 
             platform, 
-            error: error.message, 
-            success: false,
-            content: `[Error generating ${platform}: ${error.message}]`
+            content: `[Error generating ${platform}: ${error.message}]`, 
+            success: false 
           };
         }
       })
     );
 
-    // Build response object
     const output = {};
-    results.forEach(r => {
-      output[r.platform] = r.content;
-    });
+    results.forEach(r => output[r.platform] = r.content);
 
     return new Response(JSON.stringify({
       success: true,
       platforms: output,
       generated: platforms,
       voice: voice || 'civic',
-      timestamp: new Date().toISOString()
-    }), { headers, status: 200 });
+      timestamp: new Date().toISOString(),
+    }), { headers: corsHeaders });
 
   } catch (error) {
     console.error('API Error:', error);
     return new Response(JSON.stringify({ 
       error: 'Internal server error',
       details: error.message 
-    }), { status: 500, headers });
+    }), {
+      status: 500,
+      headers: corsHeaders,
+    });
   }
 }
-
