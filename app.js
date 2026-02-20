@@ -1,374 +1,345 @@
 /**
- * Ologundudu – Agege Civic Chronicle
- * THE MERGED ENGINE: Kimi's UI + Gemini's AI Brain
+ * Ologundudu – Journalist First Edition
+ * Zero-database, RSS-fed, checkbox-selective generation
  */
 
 const CONFIG = {
-    storageKey: 'ologundudu_data_v2',
-    maxChars: 15000
+  password: 'admin123',
+  apiEndpoint: '/api/generate', // Vercel serverless function
+  rssFeeds: [
+    'https://api.rss2json.com/v1/api.json?rss_url=https://punchng.com/feed/',
+    'https://api.rss2json.com/v1/api.json?rss_url=https://guardian.ng/feed/'
+  ],
+  maxPlatforms: 3,
+  demoNews: [
+    {
+      title: 'Agege Local Government Announces New Infrastructure Project',
+      content: 'The administration has commenced comprehensive road rehabilitation across major routes in Agege LGA, including Old Abeokuta Motor Road and Iju Road.',
+      source: 'Agege LGA',
+      priority: 'agege',
+      pubDate: new Date().toISOString()
+    },
+    {
+      title: 'Lagos State Health Initiative Targets Mainland Communities',
+      content: 'New healthcare program prioritizes Agege and Orile Agege with mobile clinics and free screenings.',
+      source: 'Lagos Ministry',
+      priority: 'lagos',
+      pubDate: new Date(Date.now() - 86400000).toISOString()
+    }
+  ]
 };
 
-// --- State Management ---
+// State
 const State = {
-    data: { news: [], auth: false, currentFilter: 'agege' },
-    
-    init() { this.load(); },
-    
-    load() {
-        try {
-            const stored = localStorage.getItem(CONFIG.storageKey);
-            if (stored) this.data = JSON.parse(stored);
-        } catch (e) { console.error('Storage error:', e); }
-    },
-    
-    save() {
-        try { localStorage.setItem(CONFIG.storageKey, JSON.stringify(this.data)); } 
-        catch (e) { console.error('Save error:', e); }
-    },
-    
-    addNews(news) {
-        news.id = Date.now().toString();
-        news.createdAt = new Date().toISOString();
-        this.data.news.unshift(news);
-        this.save();
-        return news;
-    },
-    
-    updateNews(id, updates) {
-        const index = this.data.news.findIndex(n => n.id === id);
-        if (index !== -1) {
-            this.data.news[index] = { ...this.data.news[index], ...updates };
-            this.save();
-            return this.data.news[index];
-        }
-        return null;
-    },
-    
-    getNewsByFilter(filter) {
-        let filtered = this.data.news;
-        if (filter === 'agege') filtered = this.data.news.filter(n => n.priority === 'agege');
-        else if (filter === 'lagos') filtered = this.data.news.filter(n => n.priority === 'lagos');
-        return filtered.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
-    },
-    
-    getStats() {
-        return {
-            agege: this.data.news.filter(n => n.priority === 'agege').length,
-            lagos: this.data.news.filter(n => n.priority === 'lagos').length,
-            pending: this.data.news.filter(n => !n.approved).length
-        };
-    }
+  auth: false,
+  currentPage: 'login',
+  rssNews: [],
+  voice: 'civic',
+  generated: null
 };
 
-// --- Authentication (Repurposed for OpenAI API Key) ---
+// Auth
 const Auth = {
-    check() {
-        return localStorage.getItem('openai_key_ologundudu') !== null;
-    },
-    
-    login(apiKey) {
-        if (apiKey.startsWith('sk-')) {
-            localStorage.setItem('openai_key_ologundudu', apiKey);
-            State.data.auth = true;
-            return true;
-        }
-        return false;
-    },
-    
-    logout() {
-        localStorage.removeItem('openai_key_ologundudu');
-        State.data.auth = false;
-        Router.go('login');
+  login(pw) {
+    if (pw === CONFIG.password) {
+      State.auth = true;
+      return true;
     }
+    return false;
+  },
+  logout() {
+    State.auth = false;
+    Router.go('login');
+  }
 };
 
-// --- Routing & UI Logic ---
+// Router
 const Router = {
-    currentPage: 'login',
-    init() { this.checkAuth(); },
+  go(page) {
+    State.currentPage = page;
     
-    checkAuth() {
-        if (!Auth.check() && this.currentPage !== 'login') this.go('login');
-        else if (Auth.check() && this.currentPage === 'login') this.go('home');
-        else this.render();
-    },
+    // Toggle screens
+    document.getElementById('auth-screen').classList.toggle('hidden', page !== 'login');
+    document.getElementById('app-screen').classList.toggle('hidden', page === 'login');
     
-    go(page) {
-        this.currentPage = page;
-        this.checkAuth();
-    },
+    // Toggle pages
+    document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+    if (page !== 'login') {
+      document.getElementById(`page-${page}`).classList.add('active');
+      document.querySelectorAll('.nav-btn').forEach(btn => {
+        btn.classList.toggle('active', btn.dataset.page === page);
+      });
+    }
     
-    render() {
-        document.querySelectorAll('.screen').forEach(s => s.classList.add('hidden'));
-        document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
-        
-        if (this.currentPage === 'login') {
-            document.getElementById('auth-screen').classList.remove('hidden');
-            // Change Kimi's label to ask for API Key instead of Admin Password
-            document.querySelector('label[for="password"]').textContent = "OpenAI API Key";
-            document.querySelector('.input-hint').textContent = "Starts with 'sk-'. Stored locally.";
-        } else {
-            document.getElementById('app-screen').classList.remove('hidden');
-            document.getElementById(`page-${this.currentPage}`).classList.add('active');
-            
-            document.querySelectorAll('.nav-btn').forEach(btn => {
-                btn.classList.toggle('active', btn.dataset.page === this.currentPage);
+    // Page init
+    if (page === 'home') RSSFeed.load();
+  }
+};
+
+// RSS Feed Loader
+const RSSFeed = {
+  async load() {
+    const container = document.getElementById('rss-feed');
+    const loading = document.getElementById('rss-loading');
+    const error = document.getElementById('rss-error');
+    
+    loading.classList.remove('hidden');
+    container.classList.add('hidden');
+    error.classList.add('hidden');
+    
+    try {
+      // Try to fetch live feeds
+      const promises = CONFIG.rssFeeds.map(url => 
+        fetch(url).then(r => r.json()).catch(() => ({ items: [] }))
+      );
+      
+      const results = await Promise.all(promises);
+      let allItems = [];
+      
+      results.forEach((result, idx) => {
+        if (result.items) {
+          const source = idx === 0 ? 'Punch' : 'Guardian';
+          result.items.slice(0, 3).forEach(item => {
+            allItems.push({
+              title: item.title,
+              content: item.description || item.content,
+              source: source,
+              url: item.link,
+              priority: this.detectAgege(item.title + ' ' + (item.description || '')) ? 'agege' : 'lagos',
+              pubDate: item.pubDate
             });
-            if (this.currentPage === 'home') NewsFilter.render();
+          });
         }
+      });
+      
+      // If no live data, use demo
+      if (allItems.length === 0) {
+        allItems = CONFIG.demoNews;
+        error.classList.remove('hidden');
+      }
+      
+      State.rssNews = allItems;
+      this.render(allItems);
+      
+    } catch (e) {
+      console.error('RSS Error:', e);
+      State.rssNews = CONFIG.demoNews;
+      this.render(CONFIG.demoNews);
+      error.classList.remove('hidden');
+    } finally {
+      loading.classList.add('hidden');
     }
+  },
+  
+  detectAgege(text) {
+    const keywords = ['agege', 'orile agege', 'agbado', 'iju', 'pen cinema', 'ogba', 'oko-oba', 'abule egba'];
+    return keywords.some(k => text.toLowerCase().includes(k));
+  },
+  
+  render(items) {
+    const container = document.getElementById('rss-feed');
+    container.innerHTML = items.map(item => `
+      <article class="news-card rss-card" onclick="RSSFeed.use('${items.indexOf(item)}')">
+        <div class="rss-badge ${item.priority === 'agege' ? 'badge-primary' : 'badge-secondary'}">
+          ${item.priority === 'agege' ? 'AGEGE' : 'LAGOS'}
+        </div>
+        <div class="news-meta">
+          <span class="news-source">${item.source}</span>
+          <span class="news-date">${new Date(item.pubDate).toLocaleDateString()}</span>
+        </div>
+        <h3 class="news-title">${item.title}</h3>
+        <p class="news-excerpt">${item.content.substring(0, 200)}...</p>
+        <div class="rss-action">
+          <span>Click to rewrite →</span>
+        </div>
+      </article>
+    `).join('');
+    container.classList.remove('hidden');
+  },
+  
+  use(index) {
+    const item = State.rssNews[index];
+    document.getElementById('compose-text').value = `${item.title}\n\n${item.content}`;
+    Voice.updateCount();
+    Router.go('compose');
+  }
 };
 
-const NewsFilter = {
-    set(filter) {
-        State.data.currentFilter = filter;
-        State.save();
-        this.render();
-    },
-    
-    render() {
-        const filter = State.data.currentFilter;
-        const news = State.getNewsByFilter(filter);
-        const stats = State.getStats();
-        
-        document.querySelectorAll('.toggle-btn').forEach(btn => {
-            btn.classList.toggle('active', btn.dataset.filter === filter);
-        });
-        
-        document.getElementById('stat-agege').textContent = stats.agege;
-        document.getElementById('stat-lagos').textContent = stats.lagos;
-        document.getElementById('stat-pending').textContent = stats.pending;
-        
-        const container = document.getElementById('news-container');
-        const emptyState = document.getElementById('empty-state');
-        
-        if (news.length === 0) {
-            container.innerHTML = '';
-            emptyState.classList.remove('hidden');
-        } else {
-            emptyState.classList.add('hidden');
-            container.innerHTML = news.map(item => this.renderCard(item)).join('');
-        }
-    },
-    
-    renderCard(item) {
-        const date = new Date(item.createdAt).toLocaleDateString('en-NG', { day: 'numeric', month: 'short', year: 'numeric' });
-        const priorityClass = item.priority === 'agege' ? 'badge-primary' : 'badge-secondary';
-        const priorityLabel = item.priority === 'agege' ? 'AGEGE FIRST' : 'LAGOS RELATED';
-        
-        return `
-            <article class="news-card" data-id="${item.id}">
-                <div class="news-header">
-                    <div>
-                        <div class="news-meta">
-                            <span class="news-source">${item.source}</span>
-                            <span class="news-date">${date}</span>
-                        </div>
-                        <h3 class="news-title">${item.title}</h3>
-                        <p class="news-excerpt">${item.content}</p>
-                    </div>
-                    <div class="news-badges">
-                        <span class="badge ${priorityClass}">${priorityLabel}</span>
-                        ${!item.approved ? '<span class="badge badge-pending">PENDING</span>' : ''}
-                    </div>
-                </div>
-                <div class="news-footer">
-                    <div class="news-actions">
-                        ${!item.approved ? 
-                            `<button class="btn btn-success btn-sm" onclick="NewsActions.approve('${item.id}')">Approve</button>` :
-                            `<button class="btn btn-secondary btn-sm" onclick="NewsActions.revoke('${item.id}')">Revoke</button>`
-                        }
-                    </div>
-                    <button class="btn btn-primary btn-sm" onclick="NewsActions.generate('${item.id}')">Generate</button>
-                </div>
-            </article>
-        `;
-    }
-};
-
-const NewsActions = {
-    approve(id) { State.updateNews(id, { approved: true }); NewsFilter.render(); },
-    revoke(id) { State.updateNews(id, { approved: false }); NewsFilter.render(); },
-    generate(id) {
-        const news = State.data.news.find(n => n.id === id);
-        if (!news) return;
-        document.getElementById('compose-text').value = `Headline: ${news.title}\n\nDetails: ${news.content}`;
-        Voice.updateCount();
-        Router.go('compose');
-    }
-};
-
-const Modal = {
-    open(id) { document.getElementById(`modal-${id}`).classList.remove('hidden'); document.body.style.overflow = 'hidden'; },
-    close(id) { document.getElementById(`modal-${id}`).classList.add('hidden'); document.body.style.overflow = ''; }
-};
-
-const Form = {
-    selectPriority(el, value) {
-        document.querySelectorAll('.priority-card').forEach(card => {
-            card.classList.remove('active');
-            card.querySelector('input').checked = false;
-        });
-        el.classList.add('active');
-        el.querySelector('input').checked = true;
-    },
-    
-    submit(e) {
-        e.preventDefault();
-        const news = {
-            title: document.getElementById('news-title').value,
-            content: document.getElementById('news-content').value,
-            source: document.getElementById('news-source').value,
-            url: document.getElementById('news-url').value,
-            priority: document.querySelector('input[name="priority"]:checked').value,
-            approved: false
-        };
-        State.addNews(news);
-        Modal.close('add-news');
-        document.getElementById('form-add-news').reset();
-        if (Router.currentPage === 'home') NewsFilter.render(); else Router.go('home');
-    }
-};
-
+// Voice Selection
 const Voice = {
-    current: 'civic',
-    set(mode) {
-        this.current = mode;
-        document.querySelectorAll('.voice-card').forEach(card => card.classList.remove('active'));
-        event.currentTarget.closest('.voice-card').classList.add('active');
-    },
-    updateCount() {
-        const text = document.getElementById('compose-text').value;
-        const words = text.trim().split(/\s+/).filter(w => w.length > 0).length;
-        document.getElementById('word-count').textContent = `${words.toLocaleString()} words`;
-        document.getElementById('char-count').textContent = `${text.length.toLocaleString()} / ${CONFIG.maxChars.toLocaleString()}`;
-    }
+  set(mode) {
+    State.voice = mode;
+    document.querySelectorAll('.voice-btn').forEach(btn => {
+      btn.classList.toggle('active', btn.dataset.voice === mode);
+    });
+  },
+  updateCount() {
+    const text = document.getElementById('compose-text').value;
+    const words = text.trim().split(/\s+/).filter(w => w.length > 0).length;
+    document.getElementById('word-count').textContent = `${words.toLocaleString()} words`;
+    document.getElementById('char-count').textContent = `${text.length.toLocaleString()} / 15,000`;
+  }
 };
 
-// --- REAL OPENAI GENERATOR ---
-const Generator = {
-    async run() {
-        const text = document.getElementById('compose-text').value;
-        if (!text.trim()) return alert('Please enter content to generate');
-        
-        const apiKey = localStorage.getItem('openai_key_ologundudu');
-        if (!apiKey) {
-            alert("Session expired. Please log out and re-enter your API Key.");
-            return Auth.logout();
-        }
-
-        const mode = Voice.current;
-        this.showLoading();
-
-        const systemPrompt = `You are 'Ologundudu', the voice of the Agege Civic Chronicle. 
-        Rewrite the provided news into 10 distinct social media formats.
-        Current Mode: ${mode === 'civic' ? 'Civic Amplification (Formal, authoritative)' : 'Reflective Motivational (Inspirational, uses Nigerian proverbs)'}.
-        You MUST return the response strictly as a JSON object with these exact keys:
-        "blog", "newsletter", "whatsapp", "instagram", "facebook", "linkedin", "tiktok", "snapchat", "x", "rednote".`;
-
-        try {
-            const response = await fetch('https://api.openai.com/v1/chat/completions', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${apiKey}`
-                },
-                body: JSON.stringify({
-                    model: "gpt-4o",
-                    messages: [
-                        { role: "system", content: systemPrompt },
-                        { role: "user", content: text }
-                    ],
-                    response_format: { type: "json_object" }
-                })
-            });
-
-            const data = await response.json();
-            if (data.error) throw new Error(data.error.message);
-
-            const outputs = JSON.parse(data.choices[0].message.content);
-            this.renderOutputs(outputs);
-
-        } catch (error) {
-            alert('API Error: ' + error.message);
-            document.getElementById('tabs-content').innerHTML = `
-                <div class="output-placeholder">
-                    <p style="color:var(--red-500)">Engine Failure: ${error.message}</p>
-                    <span>Check your API key or network connection.</span>
-                </div>`;
-        }
-    },
+// Platform Selection (Max 3)
+const PlatformSelect = {
+  update() {
+    const checkboxes = document.querySelectorAll('input[name="platform"]:checked');
+    const selected = Array.from(checkboxes).map(cb => cb.value);
+    const count = selected.length;
     
-    showLoading() {
-        document.getElementById('tabs-content').innerHTML = `
-            <div class="loading">
-                <div class="spinner"></div>
-                <span>Engine Processing via OpenAI... Do not close.</span>
-            </div>
-        `;
-    },
+    // Update UI
+    document.getElementById('selection-count').textContent = `${count}/${CONFIG.maxPlatforms} selected`;
+    document.getElementById('generate-btn').disabled = count === 0 || count > CONFIG.maxPlatforms;
     
-    renderOutputs(outputs) {
-        const platforms = Object.keys(outputs);
-        const headers = document.getElementById('tabs-header');
-        const content = document.getElementById('tabs-content');
-        
-        headers.innerHTML = platforms.map((p, i) => 
-            `<button class="tab-btn ${i === 0 ? 'active' : ''}" onclick="Generator.switchTab('${p}')" data-platform="${p}">${p.toUpperCase()}</button>`
-        ).join('');
-        
-        content.innerHTML = platforms.map((p, i) => 
-            `<div class="tab-pane ${i === 0 ? 'active' : ''}" id="pane-${p}">
-                <div class="output-header">
-                    <div class="output-title">${p.toUpperCase()}</div>
-                    <button class="btn-copy" onclick="Generator.copy('${p}')">Copy</button>
-                </div>
-                <div class="output-box" id="output-${p}">${outputs[p]}</div>
-            </div>`
-        ).join('');
-        
-        this._outputs = outputs;
-    },
-    
-    switchTab(platform) {
-        document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
-        document.querySelectorAll('.tab-pane').forEach(pane => pane.classList.remove('active'));
-        event.target.classList.add('active');
-        document.getElementById(`pane-${platform}`).classList.add('active');
-    },
-    
-    copy(platform) {
-        navigator.clipboard.writeText(this._outputs[platform]).then(() => {
-            const btn = event.target;
-            btn.textContent = 'Copied!';
-            btn.classList.add('copied');
-            setTimeout(() => { btn.textContent = 'Copy'; btn.classList.remove('copied'); }, 2000);
-        });
-    }
-};
-
-// --- Event Listeners ---
-document.addEventListener('DOMContentLoaded', () => {
-    State.init();
-    Router.init();
-    
-    // Auth login intercepts
-    document.getElementById('login-form').addEventListener('submit', (e) => {
-        e.preventDefault();
-        const apiKey = document.getElementById('password').value;
-        if (Auth.login(apiKey)) Router.go('home');
-        else {
-            const err = document.getElementById('auth-error');
-            err.textContent = "Invalid Key. Must start with 'sk-'";
-            err.classList.remove('hidden');
-        }
+    // Visual feedback
+    document.querySelectorAll('.platform-card').forEach(card => {
+      const checkbox = card.querySelector('input');
+      card.classList.toggle('selected', checkbox.checked);
+      card.classList.toggle('disabled', count >= CONFIG.maxPlatforms && !checkbox.checked);
     });
     
-    document.getElementById('form-add-news').addEventListener('submit', Form.submit);
-    document.getElementById('compose-text').addEventListener('input', () => Voice.updateCount());
+    return selected;
+  }
+};
+
+// Generator
+const Generator = {
+  async run() {
+    const text = document.getElementById('compose-text').value.trim();
+    const platforms = PlatformSelect.update();
+    
+    if (!text) {
+      alert('Please enter content to generate');
+      return;
+    }
+    if (platforms.length === 0) {
+      alert('Please select at least 1 platform');
+      return;
+    }
+    if (platforms.length > CONFIG.maxPlatforms) {
+      alert(`Maximum ${CONFIG.maxPlatforms} platforms allowed to prevent timeouts`);
+      return;
+    }
+    
+    const btn = document.getElementById('generate-btn');
+    const originalText = btn.innerHTML;
+    btn.disabled = true;
+    btn.innerHTML = `<div class="spinner-sm"></div> Generating...`;
+    
+    try {
+      const useContext = document.getElementById('use-context').checked;
+      const contextNews = useContext ? State.rssNews.slice(0, 3) : [];
+      
+      const response = await fetch(CONFIG.apiEndpoint, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          text,
+          platforms,
+          voice: State.voice,
+          contextNews
+        })
+      });
+      
+      if (!response.ok) {
+        throw new Error(`API Error: ${response.status}`);
+      }
+      
+      const data = await response.json();
+      State.generated = data.platforms;
+      this.render(data.platforms);
+      
+    } catch (error) {
+      console.error('Generation error:', error);
+      alert('Generation failed. Check console or try again.');
+    } finally {
+      btn.disabled = false;
+      btn.innerHTML = originalText;
+    }
+  },
+  
+  render(platforms) {
+    const container = document.getElementById('results-area');
+    const grid = document.getElementById('results-grid');
+    
+    grid.innerHTML = Object.entries(platforms).map(([name, content]) => `
+      <div class="result-card">
+        <div class="result-header">
+          <div class="result-title">
+            <span class="platform-icon-sm">${this.getIcon(name)}</span>
+            <strong>${this.formatName(name)}</strong>
+          </div>
+          <button class="btn-copy-sm" onclick="Generator.copy('${name}')">Copy</button>
+        </div>
+        <div class="result-content">${this.escapeHtml(content)}</div>
+      </div>
+    `).join('');
+    
+    container.classList.remove('hidden');
+    container.scrollIntoView({ behavior: 'smooth' });
+  },
+  
+  copy(name) {
+    const text = State.generated[name];
+    navigator.clipboard.writeText(text).then(() => {
+      const btn = event.target;
+      btn.textContent = 'Copied!';
+      btn.classList.add('copied');
+      setTimeout(() => {
+        btn.textContent = 'Copy';
+        btn.classList.remove('copied');
+      }, 2000);
+    });
+  },
+  
+  clear() {
+    document.getElementById('results-area').classList.add('hidden');
+    document.getElementById('results-grid').innerHTML = '';
+    State.generated = null;
+  },
+  
+  getIcon(name) {
+    const icons = {
+      blog: '📝', newsletter: '📧', whatsapp: '💬', instagram: '📷',
+      facebook: '👥', linkedin: '💼', tiktok: '🎵', snapchat: '👻',
+      x: '𝕏', rednote: '📖'
+    };
+    return icons[name] || '📄';
+  },
+  
+  formatName(name) {
+    return name === 'x' ? 'X (Twitter)' : name.charAt(0).toUpperCase() + name.slice(1);
+  },
+  
+  escapeHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+  }
+};
+
+// Event Listeners
+document.addEventListener('DOMContentLoaded', () => {
+  // Login
+  document.getElementById('login-form').addEventListener('submit', (e) => {
+    e.preventDefault();
+    const pw = document.getElementById('password').value;
+    if (Auth.login(pw)) {
+      Router.go('home');
+    } else {
+      document.getElementById('auth-error').classList.remove('hidden');
+    }
+  });
+  
+  // Textarea counter
+  document.getElementById('compose-text').addEventListener('input', () => Voice.updateCount());
 });
 
-window.Router = Router; window.Auth = Auth; window.Modal = Modal; 
-window.Form = Form; window.NewsFilter = NewsFilter; window.NewsActions = NewsActions; 
-window.Voice = Voice; window.Generator = Generator;
-
+// Expose globals
+window.Router = Router;
+window.Auth = Auth;
+window.RSSFeed = RSSFeed;
+window.Voice = Voice;
+window.PlatformSelect = PlatformSelect;
+window.Generator = Generator;
