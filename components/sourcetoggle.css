@@ -1,0 +1,25 @@
+import React from 'react';
+
+interface SourceToggleProps {
+  includeSources: boolean;
+  setIncludeSources: (value: boolean) => void;
+}
+
+export default function SourceToggle({ includeSources, setIncludeSources }: SourceToggleProps) {
+  return (
+    <div className="flex items-center space-x-3 p-3 bg-slate-50 border border-slate-200 rounded-lg mt-4">
+      <input
+        type="checkbox"
+        id="source-toggle"
+        checked={includeSources}
+        onChange={(e) => setIncludeSources(e.target.checked)}
+        className="w-4 h-4 text-amber-700 border-gray-300 rounded focus:ring-amber-500"
+      />
+      <label htmlFor="source-toggle" className="text-sm font-medium text-slate-700 cursor-pointer select-none">
+        {includeSources 
+          ? "✅ Sources Enabled: AI will include citations and links for credibility." 
+          : "🚫 Sources Disabled: AI will provide a seamless, reference-free narrative."}
+      </label>
+    </div>
+  );
+}
