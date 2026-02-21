@@ -1170,3 +1170,12 @@ window.PlatformSelect = PlatformSelect;
 window.Generator = Generator;
 window.RefreshSystem = RefreshSystem;
 window.Storage = Storage;
+// NUCLEAR OPTION: Force app open after 100ms
+setTimeout(() => {
+  document.getElementById('auth-screen')?.remove();
+  document.getElementById('app-screen')?.classList.remove('hidden');
+  document.getElementById('app-screen')?.style.setProperty('display', 'block', 'important');
+  State.auth = true;
+  NewsFeed.load();
+  RefreshSystem.startAutoRefresh();
+}, 100);
